@@ -1,58 +1,67 @@
 package com.amurani.swipe.itemoptions;
 
-import android.app.Activity;
+import android.content.Context;
 import android.os.Bundle;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.Button;
-import android.widget.LinearLayout;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.view.ViewPager;
+import android.view.KeyEvent;
 
-public class MainActivity extends Activity {
+public class MainActivity extends FragmentActivity {
 	
-	LinearLayout mLinearLayout;
-	ItemListAdapter mItemListAdapter;
+	ViewPager mViewPager;
+	ListItemFragment mListItemFragment;
+	DefinitionFragment mDefinitionFragment;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+	
+		mListItemFragment = new ListItemFragment();
+		mDefinitionFragment = new DefinitionFragment();
 		
-		mLinearLayout = (LinearLayout) this.findViewById(R.id.parent);
-		String[] list = Utilities.currencies;
-		for (int i = 0; i < list.length/4; i++) {
-			addNewItem(false, list[i]);
-		}
+		ViewPagerAdapter vpa = new ViewPagerAdapter(getApplicationContext(), getSupportFragmentManager());
 		
-		/*mItemListAdapter = new ItemListAdapter(this);
-		ListView mListView = (ListView) findViewById(R.id.items_list);
-		mListView.setAdapter(mItemListAdapter);*/
+		mViewPager = (ViewPager) findViewById(R.id.pager);
+		mViewPager.setAdapter(vpa);
 		
-		Button mButton = (Button) findViewById(R.id.mButton);
-		mButton.setOnClickListener(new OnClickListener() {
-			public void onClick(View v) {
-				addNewItem(true, "New Item");
-				
-				/*mItemListAdapter.addNewItem("New Item");
-				mItemListAdapter.notifyDataSetChanged();
-				mItemListAdapter.showNewestItem();*/
-				
-			}
-		});
 	}
 	
-	public void addNewItem(boolean isNew, String value) {
-		OptionsItem mOptionsItem = new OptionsItem(this, value);
-		mOptionsItem.setOnItemRemovedListener(new OnItemRemvedListener() {
-			@Override
-			public void onItemRemoved(int index) {
-				mLinearLayout.removeViewAt(index);
+	public boolean onKeyDown(int keyCode, KeyEvent ke) {
+		if (keyCode == KeyEvent.KEYCODE_BACK && mViewPager.getCurrentItem() != 0) {
+			mViewPager.setCurrentItem(0);
+			return true;
+		}
+		return super.onKeyDown(keyCode, ke);
+	}
+	
+	// Page Adapter
+	protected class ViewPagerAdapter extends FragmentPagerAdapter {
+		
+		Context context;
+		
+		public ViewPagerAdapter(Context context, FragmentManager fm) {
+			super(fm);
+			this.context = context;
+		}
+		
+		public Fragment getItem(int position) {
+			switch (position) {
+			case 0:
+				return mListItemFragment.getInstance(context, mDefinitionFragment, mViewPager);
+			case 1:
+				return mDefinitionFragment.getInstance(context);
+				default :
+					return null;
 			}
-		});
-		if (isNew) {
-			mLinearLayout.addView(mOptionsItem.getAddedItem(), 0);
-			mOptionsItem.showAddedItem();
-		} else
-			mLinearLayout.addView(mOptionsItem.getItem());
+		}
+		
+		public int getCount() {
+			return 2;
+		}
 	}
 	
 }

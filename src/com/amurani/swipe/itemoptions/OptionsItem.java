@@ -1,31 +1,31 @@
 package com.amurani.swipe.itemoptions;
 
 import android.annotation.TargetApi;
-import android.app.Dialog;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Point;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Vibrator;
-import android.text.Layout;
+import android.support.v4.app.FragmentManager;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnLongClickListener;
-import android.view.Window;
 import android.view.WindowManager;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.Animation.AnimationListener;
 import android.view.animation.Transformation;
 import android.view.animation.TranslateAnimation;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.amurani.swipe.itemoptions.PopUpDialog.OnEditWordListener;
 
 interface OnItemRemvedListener {
 	public void onItemRemoved(int index);
@@ -33,6 +33,10 @@ interface OnItemRemvedListener {
 
 interface OnOptionsFadedListener {
 	public void onOptionsFaded();
+}
+
+interface OnItemClickedListener {
+	public void onItemClicked(String text);
 }
 
 public class OptionsItem implements OnClickListener {
@@ -46,19 +50,22 @@ public class OptionsItem implements OnClickListener {
 	LinearLayout options;
 	ImageButton back, edit, remove;
 
-	Dialog mDialog;
-	EditText word;
-	ImageButton done;
+	PopUpDialog mPopUpDialog;
 
 	Context mContext;
+	FragmentManager mFragmentManager;
 
-	int index;
 	OnItemRemvedListener mOnItemRemvedListener = new OnItemRemvedListener() {
 		public void onItemRemoved(int index) { }
 	};
+	
+	OnItemClickedListener mOnItemClickedListener = new OnItemClickedListener() {
+		public void onItemClicked(String text) {}
+	};
 
-	public OptionsItem(Context context, String text) {
+	public OptionsItem(Context context, FragmentManager mFragmentManager, String text) {
 		this.mContext = context;
+		this.mFragmentManager = mFragmentManager;
 
 		LayoutInflater mLayoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 		item = (RelativeLayout) mLayoutInflater.inflate(R.layout.item_layout,
@@ -76,7 +83,7 @@ public class OptionsItem implements OnClickListener {
 				mVibrator.vibrate(VIBRATION_DURATION);
 				
 				toggleItemOptions(value, 0, -value.getWidth(), -value.getWidth());
-				return false;
+				return true;
 			}
 
 		});
@@ -93,17 +100,37 @@ public class OptionsItem implements OnClickListener {
 		remove.setOnClickListener(this);
 
 		// Pop up dialog
-		mDialog = new Dialog(mContext);
-		mDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-		mDialog.getWindow().getAttributes().windowAnimations = R.style.PopupStyleAnimations;
-		mDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-		mDialog.setContentView(R.layout.edit_word_layout);
-		mDialog.setCancelable(false);
-
-		word = (EditText) mDialog.findViewById(R.id.word);
-
-		done = (ImageButton) mDialog.findViewById(R.id.done);
-		done.setOnClickListener(this);
+		mPopUpDialog = new PopUpDialog();
+		mPopUpDialog.setOnEditWordListener(new OnEditWordListener() {
+			public void onEditWord(String text) {
+				value.setText(text);
+				toggleItemOptions(value, 0, value.getWidth(), 0);
+			}
+		});
+	}
+	
+	public void onClick(View v) {
+		switch (v.getId()) {
+		case R.id.back:
+			toggleItemOptions(value, 0, value.getWidth(), 0);
+			break;
+		case R.id.edit:
+			Bundle mBundle = new Bundle();
+			mBundle.putString(DefinitionFragment.WORD, value.getText().toString());
+			mPopUpDialog.setArguments(mBundle);
+			mPopUpDialog.show(mFragmentManager, "edit_word_fragment");
+			break;
+		case R.id.remove:
+			removeItem();
+			break;
+		case R.id.face_value:
+			mOnItemClickedListener.onItemClicked(value.getText().toString());
+			break;
+		case R.id.done:
+			// Allow editing
+			mPopUpDialog.dismiss();
+			break;
+		}
 	}
 
 	public RelativeLayout getItem() {
@@ -143,32 +170,6 @@ public class OptionsItem implements OnClickListener {
 		item.startAnimation(mHeightAnimation);
 	}
 
-	public void onClick(View v) {
-		switch (v.getId()) {
-		case R.id.back:
-			toggleItemOptions(value, 0, value.getWidth(), 0);
-			break;
-		case R.id.edit:
-			word.setText(value.getText().toString());
-			mDialog.show();
-			break;
-		case R.id.remove:
-			removeItem();
-			break;
-		case R.id.face_value:
-			break;
-		case R.id.done:
-			// Allow editing
-			value.setText(word.getText().toString());
-
-			word.setText("");
-			mDialog.cancel();
-
-			toggleItemOptions(value, 0, value.getWidth(), 0);
-			break;
-		}
-	}
-
 	public void toast(String message) {
 		Toast.makeText(mContext, message, TOAST_DURATION).show();
 	}
@@ -177,8 +178,12 @@ public class OptionsItem implements OnClickListener {
 		return (int) (pixels * Resources.getSystem().getDisplayMetrics().density);
 	}
 
-	protected void setOnItemRemovedListener(OnItemRemvedListener mOnItemRemvedListener) {
+	public void setOnItemRemovedListener(OnItemRemvedListener mOnItemRemvedListener) {
 		this.mOnItemRemvedListener = mOnItemRemvedListener;
+	}
+	
+	public void setOnItemClickedListener(OnItemClickedListener mOnItemClickedListener) {
+		this.mOnItemClickedListener = mOnItemClickedListener;
 	}
 
 	protected void toggleItemOptions(final TextView value, int animateFromX, int animateToX, final int stopAt) {
@@ -223,13 +228,8 @@ public class OptionsItem implements OnClickListener {
 				mHeightAnimation.setDuration(ANIMATION_DURATION);
 				mHeightAnimation.setAnimationListener(new AnimationListener() {
 					public void onAnimationEnd(Animation animation) {
-
 						int index = ((LinearLayout) item.getParent()).indexOfChild(item);
 						mOnItemRemvedListener.onItemRemoved(index);
-						
-						// Not working on 2.2, don'tnow why
-						/*int index = ((ListView)item.getParent()).indexOfChild(item);
-						mOnItemRemvedListener.onItemRemoved(index);*/
 					}
 
 					public void onAnimationRepeat(Animation animation) { }
