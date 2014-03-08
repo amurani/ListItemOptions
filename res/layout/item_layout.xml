@@ -1,0 +1,53 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/item"
+    android:layout_width="match_parent"
+    android:layout_height="49dp" >
+    
+    <!-- The item options come here -->
+    <LinearLayout
+        android:id="@+id/options"
+        android:layout_height="48dp"
+        android:layout_width="match_parent"
+        android:orientation="horizontal">
+        <ImageButton
+	        android:id="@+id/back"
+	        android:contentDescription="@string/hello_world"
+	        android:src="@drawable/ic_action_back"
+	        android:layout_height="48dp"
+	        android:layout_width="fill_parent"
+	        style="@style/OptionsStyle" />
+        <ImageButton
+            android:id="@+id/edit"
+	        android:contentDescription="@string/hello_world"
+	        android:src="@drawable/ic_action_edit"
+	        android:layout_height="48dp"
+	        android:layout_width="fill_parent"
+	        style="@style/OptionsStyle" />
+	    <ImageButton
+	        android:id="@+id/remove"
+	        android:contentDescription="@string/hello_world"
+	        android:src="@drawable/ic_action_remove"
+	        android:layout_height="48dp"
+	        android:layout_width="fill_parent"
+	        style="@style/OptionsStyle" />
+    </LinearLayout>
+    
+	<!-- This item will be visible by default. It hides the options and moves when swiped -->
+    <TextView
+        android:id="@+id/face_value"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="@string/hello_world"
+        android:background="@drawable/face_value_background"
+        android:gravity="center_vertical"
+        android:paddingLeft="24dp"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+    
+    <!-- Bottom border -->
+    <View
+        android:background="#eee"
+        android:layout_width="match_parent"
+        android:layout_height="1dp" />
+    
+</RelativeLayout>
